@@ -8,3 +8,5 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 server.port=8081
+jwt.secret=NGY4YTJlOWMxYjdkNmYzYTVlOGMwYjJkNGY2YThjMWUzYjVkN2Y5YTJjNGU2YjhkMGYyYTRjNmU4YjBkMmY0YQ==
+jwt.expiration=86400000
