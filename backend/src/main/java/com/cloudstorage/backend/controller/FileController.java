@@ -69,4 +69,8 @@ public class FileController {
     public ResponseEntity<List<FileResponse>> listStarred() {
         return ResponseEntity.ok(fileService.listStarred());
     }
+    @GetMapping("/search")
+    public ResponseEntity<List<FileResponse>> searchFiles(@RequestParam String query) {
+        return ResponseEntity.ok(fileService.searchFiles(query));
+    }
 }

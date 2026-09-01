@@ -17,4 +17,6 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
     List<FileEntity> findByOwnerIdAndDeletedTrue(Long ownerId);
 
     List<FileEntity> findByOwnerIdAndStarredTrueAndDeletedFalse(Long ownerId);
+
+    List<FileEntity> findByOwnerIdAndDeletedFalseAndOriginalNameContainingIgnoreCase(Long ownerId, String query);
 }

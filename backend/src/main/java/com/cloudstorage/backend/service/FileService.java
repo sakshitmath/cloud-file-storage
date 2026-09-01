@@ -119,4 +119,10 @@ public class FileService {
         return fileRepository.findByOwnerIdAndStarredTrueAndDeletedFalse(user.getId())
                 .stream().map(this::toResponse).toList();
     }
+
+    public List<FileResponse> searchFiles(String query) {
+        User user = getCurrentUser();
+        return fileRepository.findByOwnerIdAndDeletedFalseAndOriginalNameContainingIgnoreCase(user.getId(), query)
+                .stream().map(this::toResponse).toList();
+    }
 }
