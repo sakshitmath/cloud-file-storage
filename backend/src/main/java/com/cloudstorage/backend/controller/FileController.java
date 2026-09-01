@@ -60,4 +60,13 @@ public class FileController {
     public ResponseEntity<List<FileResponse>> listTrash() {
         return ResponseEntity.ok(fileService.listTrash());
     }
+    @PostMapping("/{id}/star")
+    public ResponseEntity<FileResponse> toggleStar(@PathVariable Long id) {
+        return ResponseEntity.ok(fileService.toggleStar(id));
+    }
+
+    @GetMapping("/starred")
+    public ResponseEntity<List<FileResponse>> listStarred() {
+        return ResponseEntity.ok(fileService.listStarred());
+    }
 }

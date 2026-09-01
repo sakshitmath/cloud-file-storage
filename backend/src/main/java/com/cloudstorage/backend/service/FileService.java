@@ -105,4 +105,18 @@ public class FileService {
         return fileRepository.findByOwnerIdAndDeletedTrue(user.getId())
                 .stream().map(this::toResponse).toList();
     }
+    public FileResponse toggleStar(Long fileId) {
+        User user = getCurrentUser();
+        FileEntity file = fileRepository.findByIdAndOwnerId(fileId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+        file.setStarred(!file.isStarred());
+        FileEntity saved = fileRepository.save(file);
+        return toResponse(saved);
+    }
+
+    public List<FileResponse> listStarred() {
+        User user = getCurrentUser();
+        return fileRepository.findByOwnerIdAndStarredTrueAndDeletedFalse(user.getId())
+                .stream().map(this::toResponse).toList();
+    }
 }
