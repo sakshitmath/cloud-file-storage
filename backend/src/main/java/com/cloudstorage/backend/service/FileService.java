@@ -83,4 +83,26 @@ public class FileService {
                 file.getCreatedAt()
         );
     }
+
+    public void softDeleteFile(Long fileId) {
+        User user = getCurrentUser();
+        FileEntity file = fileRepository.findByIdAndOwnerId(fileId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+        file.setDeleted(true);
+        fileRepository.save(file);
+    }
+
+    public void restoreFile(Long fileId) {
+        User user = getCurrentUser();
+        FileEntity file = fileRepository.findByIdAndOwnerId(fileId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+        file.setDeleted(false);
+        fileRepository.save(file);
+    }
+
+    public List<FileResponse> listTrash() {
+        User user = getCurrentUser();
+        return fileRepository.findByOwnerIdAndDeletedTrue(user.getId())
+                .stream().map(this::toResponse).toList();
+    }
 }

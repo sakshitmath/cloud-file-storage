@@ -43,4 +43,21 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getOriginalName() + "\"")
                 .body(resource);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteFile(@PathVariable Long id) {
+        fileService.softDeleteFile(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreFile(@PathVariable Long id) {
+        fileService.restoreFile(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/trash")
+    public ResponseEntity<List<FileResponse>> listTrash() {
+        return ResponseEntity.ok(fileService.listTrash());
+    }
 }
