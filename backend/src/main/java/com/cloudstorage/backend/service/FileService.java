@@ -13,6 +13,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.cloudstorage.backend.repository.ShareRepository;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class FileService {
     private final FolderRepository folderRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
+    private final ShareRepository shareRepository;
 
     private User getCurrentUser() {
         String email = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -64,8 +66,18 @@ public class FileService {
 
     public FileEntity getFileForDownload(Long fileId) {
         User user = getCurrentUser();
+
+        // Owner can always access
         return fileRepository.findByIdAndOwnerId(fileId, user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+                .or(() -> {
+                    // Not the owner — check if the file was shared with this user
+                    boolean hasAccess = shareRepository.findByFileIdAndSharedWithUserId(fileId, user.getId()).isPresent();
+                    if (hasAccess) {
+                        return fileRepository.findById(fileId);
+                    }
+                    return java.util.Optional.empty();
+                })
+                .orElseThrow(() -> new IllegalArgumentException("File not found or you don't have access"));
     }
 
     public Resource loadFileResource(FileEntity file) {
