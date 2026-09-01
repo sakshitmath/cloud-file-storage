@@ -43,4 +43,9 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getEmail());
         return new AuthResponse("Login successful", user.getId(), user.getEmail(), token);
     }
+    public AuthResponse getCurrentUserInfo(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return new AuthResponse("Current user", user.getId(), user.getEmail(), null);
+    }
 }
