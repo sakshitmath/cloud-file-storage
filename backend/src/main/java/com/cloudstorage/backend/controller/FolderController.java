@@ -44,4 +44,11 @@ public class FolderController {
     public ResponseEntity<List<FolderResponse>> listTrash() {
         return ResponseEntity.ok(folderService.listTrash());
     }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<FolderResponse> renameFolder(
+            @PathVariable Long id,
+            @RequestBody FolderRequest request) {
+        return ResponseEntity.ok(folderService.renameFolder(id, request.getName()));
+    }
 }

@@ -87,4 +87,16 @@ public class FolderService {
         return folderRepository.findByOwnerIdAndDeletedTrue(user.getId())
                 .stream().map(this::toResponse).toList();
     }
+
+    public FolderResponse renameFolder(Long folderId, String newName) {
+        User user = getCurrentUser();
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
+        if (!folder.getOwner().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("You are not the owner of this folder");
+        }
+        folder.setName(newName);
+        Folder saved = folderRepository.save(folder);
+        return toResponse(saved);
+    }
 }
