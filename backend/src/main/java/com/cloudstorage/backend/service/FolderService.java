@@ -59,4 +59,32 @@ public class FolderService {
                 folder.getCreatedAt()
         );
     }
+
+    public void softDeleteFolder(Long folderId) {
+        User user = getCurrentUser();
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
+        if (!folder.getOwner().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("You are not the owner of this folder");
+        }
+        folder.setDeleted(true);
+        folderRepository.save(folder);
+    }
+
+    public void restoreFolder(Long folderId) {
+        User user = getCurrentUser();
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
+        if (!folder.getOwner().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("You are not the owner of this folder");
+        }
+        folder.setDeleted(false);
+        folderRepository.save(folder);
+    }
+
+    public List<FolderResponse> listTrash() {
+        User user = getCurrentUser();
+        return folderRepository.findByOwnerIdAndDeletedTrue(user.getId())
+                .stream().map(this::toResponse).toList();
+    }
 }

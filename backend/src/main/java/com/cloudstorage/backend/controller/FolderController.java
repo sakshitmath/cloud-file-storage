@@ -27,4 +27,21 @@ public class FolderController {
             @RequestParam(required = false) Long parentFolderId) {
         return ResponseEntity.ok(folderService.listFolders(parentFolderId));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteFolder(@PathVariable Long id) {
+        folderService.softDeleteFolder(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreFolder(@PathVariable Long id) {
+        folderService.restoreFolder(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/trash")
+    public ResponseEntity<List<FolderResponse>> listTrash() {
+        return ResponseEntity.ok(folderService.listTrash());
+    }
 }
