@@ -1,6 +1,7 @@
 package com.cloudstorage.backend.controller;
 
 import com.cloudstorage.backend.dto.FileResponse;
+import com.cloudstorage.backend.dto.FileUpdateRequest;
 import com.cloudstorage.backend.model.FileEntity;
 import com.cloudstorage.backend.service.FileService;
 import lombok.RequiredArgsConstructor;
@@ -72,5 +73,12 @@ public class FileController {
     @GetMapping("/search")
     public ResponseEntity<List<FileResponse>> searchFiles(@RequestParam String query) {
         return ResponseEntity.ok(fileService.searchFiles(query));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<FileResponse> updateFile(
+            @PathVariable Long id,
+            @RequestBody FileUpdateRequest request) {
+        return ResponseEntity.ok(fileService.updateFile(id, request));
     }
 }
