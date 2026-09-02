@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axiosClient from '../api/axiosClient'
 
@@ -6,6 +6,8 @@ function Dashboard() {
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -23,6 +25,27 @@ function Dashboard() {
     }
   }
 
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setUploading(true)
+    setError('')
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      await axiosClient.post('/files/upload', formData)
+      await fetchFiles()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     navigate('/')
@@ -32,12 +55,27 @@ function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow px-6 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-blue-600">My Drive</h1>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-red-600 hover:underline"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => fileInputRef.current.click()}
+            disabled={uploading}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {uploading ? 'Uploading...' : 'Upload File'}
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={handleLogout}
+            className="text-sm text-red-600 hover:underline"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <main className="p-6">
