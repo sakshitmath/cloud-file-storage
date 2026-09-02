@@ -10,3 +10,7 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 server.port=8081
 jwt.secret=NGY4YTJlOWMxYjdkNmYzYTVlOGMwYjJkNGY2YThjMWUzYjVkN2Y5YTJjNGU2YjhkMGYyYTRjNmU4YjBkMmY0YQ==
 jwt.expiration=86400000
+spring.servlet.multipart.max-file-size=100MB
+spring.servlet.multipart.max-request-size=100MB
+server.tomcat.max-http-form-post-size=100MB
+server.tomcat.connection-timeout=60000
