@@ -13,6 +13,8 @@ function Dashboard() {
   const [uploading, setUploading] = useState(false)
   const [previewFile, setPreviewFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState(null)
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -55,6 +57,8 @@ function Dashboard() {
     setView(newView)
     setCurrentFolderId(null)
     setFolderStack([])
+    setSearchResults(null)
+    setSearchQuery('')
   }
 
   const handleFileSelect = async (e) => {
@@ -97,7 +101,7 @@ function Dashboard() {
   }
 
   const handleFileClick = async (file) => {
-    if (view === 'trash') return // no preview from trash
+    if (view === 'trash') return
     try {
       const response = await axiosClient.get(`/files/${file.id}/download`, {
         responseType: 'blob',
@@ -208,6 +212,25 @@ function Dashboard() {
     )
   }
 
+  const handleSearch = async (e) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) {
+      setSearchResults(null)
+      return
+    }
+    try {
+      const res = await axiosClient.get('/files/search', { params: { query: searchQuery.trim() } })
+      setSearchResults(res.data)
+    } catch (err) {
+      setError('Search failed')
+    }
+  }
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchResults(null)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-48 bg-white shadow-md p-4 flex flex-col gap-2">
@@ -233,40 +256,60 @@ function Dashboard() {
       </aside>
 
       <div className="flex-1">
-        <header className="bg-white shadow px-6 py-4 flex justify-end items-center gap-4">
-          {view === 'drive' && (
-            <>
-              <button
-                onClick={handleCreateFolder}
-                className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
-              >
-                New Folder
+        <header className="bg-white shadow px-6 py-4 flex justify-between items-center gap-4">
+          <form onSubmit={handleSearch} className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2 w-64"
+            />
+            <button type="submit" className="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300">
+              Search
+            </button>
+            {searchResults && (
+              <button type="button" onClick={clearSearch} className="text-sm text-blue-600 hover:underline">
+                Clear
               </button>
-              <button
-                onClick={() => fileInputRef.current.click()}
-                disabled={uploading}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-              >
-                {uploading ? 'Uploading...' : 'Upload File'}
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </>
-          )}
-          <button
-            onClick={handleLogout}
-            className="text-sm text-red-600 hover:underline"
-          >
-            Logout
-          </button>
+            )}
+          </form>
+
+          <div className="flex items-center gap-4">
+            {view === 'drive' && (
+              <>
+                <button
+                  onClick={handleCreateFolder}
+                  className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
+                >
+                  New Folder
+                </button>
+                <button
+                  onClick={() => fileInputRef.current.click()}
+                  disabled={uploading}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {uploading ? 'Uploading...' : 'Upload File'}
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </>
+            )}
+            <button
+              onClick={handleLogout}
+              className="text-sm text-red-600 hover:underline"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         <main className="p-6">
-          {view === 'drive' && currentFolderId && (
+          {view === 'drive' && currentFolderId && !searchResults && (
             <button
               onClick={goBack}
               className="mb-4 text-blue-600 hover:underline text-sm"
@@ -275,17 +318,23 @@ function Dashboard() {
             </button>
           )}
 
+          {searchResults && (
+            <p className="mb-4 text-gray-600 text-sm">
+              Showing {searchResults.length} result(s) for "{searchQuery}"
+            </p>
+          )}
+
           {loading && <p>Loading...</p>}
           {error && <p className="text-red-600">{error}</p>}
 
-          {!loading && !error && folders.length === 0 && files.length === 0 && (
+          {!loading && !error && !searchResults && folders.length === 0 && files.length === 0 && (
             <p className="text-gray-500">
               {view === 'trash' ? 'Trash is empty.' : view === 'starred' ? 'No starred files.' : 'This folder is empty.'}
             </p>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {folders.map((folder) => (
+            {!searchResults && folders.map((folder) => (
               <div
                 key={folder.id}
                 onClick={() => openFolder(folder)}
@@ -305,7 +354,7 @@ function Dashboard() {
               </div>
             ))}
 
-            {files.map((file) => (
+            {(searchResults ?? files).map((file) => (
               <div
                 key={file.id}
                 onClick={() => handleFileClick(file)}
