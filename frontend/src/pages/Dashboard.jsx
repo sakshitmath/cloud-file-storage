@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import axiosClient from '../api/axiosClient'
 
 function Dashboard() {
-  const [view, setView] = useState('drive') // 'drive' | 'starred' | 'trash'
+  const [view, setView] = useState('drive') // 'drive' | 'starred' | 'trash' | 'shared'
   const [files, setFiles] = useState([])
   const [folders, setFolders] = useState([])
   const [currentFolderId, setCurrentFolderId] = useState(null)
@@ -15,6 +15,10 @@ function Dashboard() {
   const [previewUrl, setPreviewUrl] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState(null)
+  const [shareFile, setShareFile] = useState(null)
+  const [shareEmail, setShareEmail] = useState('')
+  const [sharePermission, setSharePermission] = useState('VIEWER')
+  const [shareMessage, setShareMessage] = useState('')
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -29,6 +33,17 @@ function Dashboard() {
       if (view === 'starred') {
         const res = await axiosClient.get('/files/starred')
         setFiles(res.data)
+        setFolders([])
+      } else if (view === 'shared') {
+        const res = await axiosClient.get('/shared-with-me')
+        const sharedFiles = res.data.map((share) => ({
+          id: share.fileId,
+          originalName: share.fileName,
+          size: 0,
+          contentType: '',
+          starred: false,
+        }))
+        setFiles(sharedFiles)
         setFolders([])
       } else if (view === 'trash') {
         const [filesRes, foldersRes] = await Promise.all([
@@ -231,6 +246,33 @@ function Dashboard() {
     setSearchResults(null)
   }
 
+  const handleShare = async (e) => {
+    e.preventDefault()
+    setShareMessage('')
+    try {
+      await axiosClient.post(`/files/${shareFile.id}/share`, {
+        sharedWithEmail: shareEmail,
+        permission: sharePermission,
+      })
+      setShareMessage('Shared successfully!')
+      setShareEmail('')
+    } catch (err) {
+      setShareMessage(err.response?.data?.error || 'Failed to share')
+    }
+  }
+
+  const openShareModal = (e, file) => {
+    e.stopPropagation()
+    setShareFile(file)
+    setShareMessage('')
+  }
+
+  const closeShareModal = () => {
+    setShareFile(null)
+    setShareEmail('')
+    setShareMessage('')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-48 bg-white shadow-md p-4 flex flex-col gap-2">
@@ -246,6 +288,12 @@ function Dashboard() {
           className={`text-left px-3 py-2 rounded ${view === 'starred' ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100'}`}
         >
           ⭐ Starred
+        </button>
+        <button
+          onClick={() => switchView('shared')}
+          className={`text-left px-3 py-2 rounded ${view === 'shared' ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100'}`}
+        >
+          👥 Shared with me
         </button>
         <button
           onClick={() => switchView('trash')}
@@ -329,7 +377,13 @@ function Dashboard() {
 
           {!loading && !error && !searchResults && folders.length === 0 && files.length === 0 && (
             <p className="text-gray-500">
-              {view === 'trash' ? 'Trash is empty.' : view === 'starred' ? 'No starred files.' : 'This folder is empty.'}
+              {view === 'trash'
+                ? 'Trash is empty.'
+                : view === 'starred'
+                ? 'No starred files.'
+                : view === 'shared'
+                ? 'Nothing shared with you yet.'
+                : 'This folder is empty.'}
             </p>
           )}
 
@@ -363,24 +417,35 @@ function Dashboard() {
                 <div className="flex justify-between items-start gap-2">
                   <div className="min-w-0">
                     <p className="font-medium truncate">{file.originalName}</p>
-                    <p className="text-xs text-gray-500">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </p>
+                    {view !== 'shared' && (
+                      <p className="text-xs text-gray-500">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    {view !== 'trash' && (
+                    {view === 'drive' && (
                       <button onClick={(e) => toggleStar(e, file.id)} className="text-lg">
                         {file.starred ? '⭐' : '☆'}
                       </button>
                     )}
-                    {view === 'trash' ? (
+                    {view === 'drive' && (
+                      <button
+                        onClick={(e) => openShareModal(e, file)}
+                        className="text-xs text-gray-600 hover:underline"
+                      >
+                        Share
+                      </button>
+                    )}
+                    {view === 'trash' && (
                       <button
                         onClick={(e) => restoreFile(e, file.id)}
                         className="text-xs text-blue-600 hover:underline"
                       >
                         Restore
                       </button>
-                    ) : (
+                    )}
+                    {view === 'drive' && (
                       <button
                         onClick={(e) => deleteFile(e, file.id)}
                         className="text-xs text-red-600 hover:underline"
@@ -395,6 +460,45 @@ function Dashboard() {
           </div>
         </main>
       </div>
+
+      {shareFile && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-medium">Share "{shareFile.originalName}"</h2>
+              <button onClick={closeShareModal} className="text-2xl leading-none text-gray-500 hover:text-gray-800">
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleShare}>
+              <input
+                type="email"
+                placeholder="User's email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                required
+              />
+              <select
+                value={sharePermission}
+                onChange={(e) => setSharePermission(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+              >
+                <option value="VIEWER">Viewer</option>
+                <option value="EDITOR">Editor</option>
+              </select>
+              {shareMessage && (
+                <p className={`text-sm mb-3 ${shareMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+                  {shareMessage}
+                </p>
+              )}
+              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                Share
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {previewFile && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
