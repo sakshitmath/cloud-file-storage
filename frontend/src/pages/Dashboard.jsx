@@ -19,6 +19,11 @@ function Dashboard() {
   const [shareEmail, setShareEmail] = useState('')
   const [sharePermission, setSharePermission] = useState('VIEWER')
   const [shareMessage, setShareMessage] = useState('')
+  const [linkShareFile, setLinkShareFile] = useState(null)
+  const [linkSharePassword, setLinkSharePassword] = useState('')
+  const [linkShareExpiryHours, setLinkShareExpiryHours] = useState('')
+  const [linkShareResult, setLinkShareResult] = useState(null)
+  const [linkShareMessage, setLinkShareMessage] = useState('')
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -185,6 +190,32 @@ function Dashboard() {
     }
   }
 
+  const renameFile = async (e, file) => {
+    e.stopPropagation()
+    const newName = prompt('New file name:', file.originalName)
+    if (!newName || !newName.trim() || newName.trim() === file.originalName) return
+
+    try {
+      await axiosClient.patch(`/files/${file.id}`, { originalName: newName.trim() })
+      await fetchData()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to rename file')
+    }
+  }
+
+  const renameFolder = async (e, folder) => {
+    e.stopPropagation()
+    const newName = prompt('New folder name:', folder.name)
+    if (!newName || !newName.trim() || newName.trim() === folder.name) return
+
+    try {
+      await axiosClient.patch(`/folders/${folder.id}`, { name: newName.trim() })
+      await fetchData()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to rename folder')
+    }
+  }
+
   const openFolder = (folder) => {
     if (view === 'trash') return
     setFolderStack([...folderStack, currentFolderId])
@@ -271,6 +302,42 @@ function Dashboard() {
     setShareFile(null)
     setShareEmail('')
     setShareMessage('')
+  }
+
+  const openLinkShareModal = (e, file) => {
+    e.stopPropagation()
+    setLinkShareFile(file)
+    setLinkSharePassword('')
+    setLinkShareExpiryHours('')
+    setLinkShareResult(null)
+    setLinkShareMessage('')
+  }
+
+  const closeLinkShareModal = () => {
+    setLinkShareFile(null)
+    setLinkShareResult(null)
+    setLinkShareMessage('')
+  }
+
+  const handleGenerateLink = async (e) => {
+    e.preventDefault()
+    setLinkShareMessage('')
+    try {
+      const body = {}
+      if (linkSharePassword.trim()) body.password = linkSharePassword.trim()
+      if (linkShareExpiryHours) body.expiresInHours = Number(linkShareExpiryHours)
+
+      const res = await axiosClient.post(`/files/${linkShareFile.id}/link-share`, body)
+      const fullUrl = `${axiosClient.defaults.baseURL}/public/files/${res.data.token}`
+      setLinkShareResult({ ...res.data, fullUrl })
+    } catch (err) {
+      setLinkShareMessage(err.response?.data?.error || 'Failed to generate link')
+    }
+  }
+
+  const copyLinkToClipboard = () => {
+    navigator.clipboard.writeText(linkShareResult.fullUrl)
+    setLinkShareMessage('Link copied to clipboard!')
   }
 
   return (
@@ -394,16 +461,26 @@ function Dashboard() {
                 onClick={() => openFolder(folder)}
                 className={`bg-yellow-50 border border-yellow-200 p-4 rounded-lg shadow hover:shadow-md transition ${view !== 'trash' ? 'cursor-pointer' : ''}`}
               >
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-2">
                   <p className="font-medium truncate">📁 {folder.name}</p>
-                  {view === 'trash' && (
-                    <button
-                      onClick={(e) => restoreFolder(e, folder.id)}
-                      className="text-xs text-blue-600 hover:underline flex-shrink-0 ml-2"
-                    >
-                      Restore
-                    </button>
-                  )}
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {view === 'drive' && (
+                      <button
+                        onClick={(e) => renameFolder(e, folder)}
+                        className="text-xs text-gray-600 hover:underline"
+                      >
+                        Rename
+                      </button>
+                    )}
+                    {view === 'trash' && (
+                      <button
+                        onClick={(e) => restoreFolder(e, folder.id)}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Restore
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -431,10 +508,26 @@ function Dashboard() {
                     )}
                     {view === 'drive' && (
                       <button
+                        onClick={(e) => renameFile(e, file)}
+                        className="text-xs text-gray-600 hover:underline"
+                      >
+                        Rename
+                      </button>
+                    )}
+                    {view === 'drive' && (
+                      <button
                         onClick={(e) => openShareModal(e, file)}
                         className="text-xs text-gray-600 hover:underline"
                       >
                         Share
+                      </button>
+                    )}
+                    {view === 'drive' && (
+                      <button
+                        onClick={(e) => openLinkShareModal(e, file)}
+                        className="text-xs text-gray-600 hover:underline"
+                      >
+                        Get Link
                       </button>
                     )}
                     {view === 'trash' && (
@@ -496,6 +589,70 @@ function Dashboard() {
                 Share
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {linkShareFile && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-medium truncate pr-4">Get link for "{linkShareFile.originalName}"</h2>
+              <button onClick={closeLinkShareModal} className="text-2xl leading-none text-gray-500 hover:text-gray-800 flex-shrink-0">
+                &times;
+              </button>
+            </div>
+
+            {!linkShareResult ? (
+              <form onSubmit={handleGenerateLink}>
+                <label className="block text-sm text-gray-600 mb-1">Password (optional)</label>
+                <input
+                  type="text"
+                  placeholder="Leave blank for no password"
+                  value={linkSharePassword}
+                  onChange={(e) => setLinkSharePassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                />
+                <label className="block text-sm text-gray-600 mb-1">Expires in (hours, optional)</label>
+                <input
+                  type="number"
+                  placeholder="Leave blank for no expiry"
+                  value={linkShareExpiryHours}
+                  onChange={(e) => setLinkShareExpiryHours(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                />
+                {linkShareMessage && (
+                  <p className="text-sm mb-3 text-red-600">{linkShareMessage}</p>
+                )}
+                <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                  Generate Link
+                </button>
+              </form>
+            ) : (
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Share this link:</p>
+                <div className="bg-gray-100 rounded p-2 text-xs break-all mb-3">
+                  {linkShareResult.fullUrl}
+                </div>
+                {linkShareResult.passwordProtected && (
+                  <p className="text-xs text-gray-500 mb-2">🔒 Password protected</p>
+                )}
+                {linkShareResult.expiresAt && (
+                  <p className="text-xs text-gray-500 mb-3">
+                    ⏱ Expires: {new Date(linkShareResult.expiresAt).toLocaleString()}
+                  </p>
+                )}
+                {linkShareMessage && (
+                  <p className="text-sm mb-3 text-green-600">{linkShareMessage}</p>
+                )}
+                <button
+                  onClick={copyLinkToClipboard}
+                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                >
+                  Copy Link
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
