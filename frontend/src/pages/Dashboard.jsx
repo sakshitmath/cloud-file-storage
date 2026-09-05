@@ -24,12 +24,19 @@ function Dashboard() {
   const [linkShareExpiryHours, setLinkShareExpiryHours] = useState('')
   const [linkShareResult, setLinkShareResult] = useState(null)
   const [linkShareMessage, setLinkShareMessage] = useState('')
+  const [openMenu, setOpenMenu] = useState(null) // { type: 'file'|'folder', id }
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     fetchData()
   }, [view, currentFolderId])
+
+  useEffect(() => {
+    const closeMenuOnOutsideClick = () => setOpenMenu(null)
+    document.addEventListener('click', closeMenuOnOutsideClick)
+    return () => document.removeEventListener('click', closeMenuOnOutsideClick)
+  }, [])
 
   const fetchData = async () => {
     setLoading(true)
@@ -162,6 +169,7 @@ function Dashboard() {
 
   const deleteFile = async (e, fileId) => {
     e.stopPropagation()
+    setOpenMenu(null)
     try {
       await axiosClient.delete(`/files/${fileId}`)
       await fetchData()
@@ -172,6 +180,7 @@ function Dashboard() {
 
   const restoreFile = async (e, fileId) => {
     e.stopPropagation()
+    setOpenMenu(null)
     try {
       await axiosClient.post(`/files/${fileId}/restore`)
       await fetchData()
@@ -182,6 +191,7 @@ function Dashboard() {
 
   const restoreFolder = async (e, folderId) => {
     e.stopPropagation()
+    setOpenMenu(null)
     try {
       await axiosClient.post(`/folders/${folderId}/restore`)
       await fetchData()
@@ -192,6 +202,7 @@ function Dashboard() {
 
   const renameFile = async (e, file) => {
     e.stopPropagation()
+    setOpenMenu(null)
     const newName = prompt('New file name:', file.originalName)
     if (!newName || !newName.trim() || newName.trim() === file.originalName) return
 
@@ -205,6 +216,7 @@ function Dashboard() {
 
   const renameFolder = async (e, folder) => {
     e.stopPropagation()
+    setOpenMenu(null)
     const newName = prompt('New folder name:', folder.name)
     if (!newName || !newName.trim() || newName.trim() === folder.name) return
 
@@ -250,7 +262,7 @@ function Dashboard() {
         <p className="text-gray-600 mb-4">No preview available for this file type.</p>
         <button
           onClick={downloadPreviewFile}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-teal-600 text-white px-4 py-2 rounded-xl hover:bg-teal-700"
         >
           Download Instead
         </button>
@@ -294,6 +306,7 @@ function Dashboard() {
 
   const openShareModal = (e, file) => {
     e.stopPropagation()
+    setOpenMenu(null)
     setShareFile(file)
     setShareMessage('')
   }
@@ -306,6 +319,7 @@ function Dashboard() {
 
   const openLinkShareModal = (e, file) => {
     e.stopPropagation()
+    setOpenMenu(null)
     setLinkShareFile(file)
     setLinkSharePassword('')
     setLinkShareExpiryHours('')
@@ -340,51 +354,49 @@ function Dashboard() {
     setLinkShareMessage('Link copied to clipboard!')
   }
 
+  const toggleMenu = (e, type, id) => {
+    e.stopPropagation()
+    setOpenMenu((prev) => (prev && prev.type === type && prev.id === id ? null : { type, id }))
+  }
+
+  const navItemClass = (isActive) =>
+    `text-left px-3 py-2 rounded-xl transition-colors ${
+      isActive ? 'bg-teal-100 text-teal-700 font-medium' : 'hover:bg-teal-50 text-gray-700'
+    }`
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-48 bg-white shadow-md p-4 flex flex-col gap-2">
-        <h1 className="text-lg font-bold text-blue-600 mb-4">My Drive</h1>
-        <button
-          onClick={() => switchView('drive')}
-          className={`text-left px-3 py-2 rounded ${view === 'drive' ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100'}`}
-        >
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex">
+      <aside className="w-56 bg-white/70 backdrop-blur-sm shadow-md p-5 flex flex-col gap-2 rounded-r-3xl">
+        <h1 className="text-xl font-bold text-teal-600 mb-6">Cloud Storage</h1>
+        <button onClick={() => switchView('drive')} className={navItemClass(view === 'drive')}>
           📁 My Files
         </button>
-        <button
-          onClick={() => switchView('starred')}
-          className={`text-left px-3 py-2 rounded ${view === 'starred' ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100'}`}
-        >
+        <button onClick={() => switchView('starred')} className={navItemClass(view === 'starred')}>
           ⭐ Starred
         </button>
-        <button
-          onClick={() => switchView('shared')}
-          className={`text-left px-3 py-2 rounded ${view === 'shared' ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100'}`}
-        >
+        <button onClick={() => switchView('shared')} className={navItemClass(view === 'shared')}>
           👥 Shared with me
         </button>
-        <button
-          onClick={() => switchView('trash')}
-          className={`text-left px-3 py-2 rounded ${view === 'trash' ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100'}`}
-        >
+        <button onClick={() => switchView('trash')} className={navItemClass(view === 'trash')}>
           🗑️ Trash
         </button>
       </aside>
 
       <div className="flex-1">
-        <header className="bg-white shadow px-6 py-4 flex justify-between items-center gap-4">
+        <header className="bg-white/70 backdrop-blur-sm shadow-sm px-6 py-4 flex justify-between items-center gap-4 rounded-bl-3xl">
           <form onSubmit={handleSearch} className="flex items-center gap-2">
             <input
               type="text"
               placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 w-64"
+              className="border border-teal-200 bg-white rounded-xl px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-teal-300"
             />
-            <button type="submit" className="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300">
+            <button type="submit" className="bg-teal-100 text-teal-700 px-3 py-2 rounded-xl hover:bg-teal-200">
               Search
             </button>
             {searchResults && (
-              <button type="button" onClick={clearSearch} className="text-sm text-blue-600 hover:underline">
+              <button type="button" onClick={clearSearch} className="text-sm text-teal-600 hover:underline">
                 Clear
               </button>
             )}
@@ -395,14 +407,14 @@ function Dashboard() {
               <>
                 <button
                   onClick={handleCreateFolder}
-                  className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
+                  className="bg-white border border-teal-200 text-teal-700 px-4 py-2 rounded-xl hover:bg-teal-50 shadow-sm"
                 >
                   New Folder
                 </button>
                 <button
                   onClick={() => fileInputRef.current.click()}
                   disabled={uploading}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="bg-teal-600 text-white px-4 py-2 rounded-xl hover:bg-teal-700 disabled:opacity-50 shadow-sm"
                 >
                   {uploading ? 'Uploading...' : 'Upload File'}
                 </button>
@@ -416,7 +428,7 @@ function Dashboard() {
             )}
             <button
               onClick={handleLogout}
-              className="text-sm text-red-600 hover:underline"
+              className="text-sm text-red-500 hover:underline"
             >
               Logout
             </button>
@@ -427,7 +439,7 @@ function Dashboard() {
           {view === 'drive' && currentFolderId && !searchResults && (
             <button
               onClick={goBack}
-              className="mb-4 text-blue-600 hover:underline text-sm"
+              className="mb-4 text-teal-600 hover:underline text-sm"
             >
               ← Back
             </button>
@@ -439,8 +451,8 @@ function Dashboard() {
             </p>
           )}
 
-          {loading && <p>Loading...</p>}
-          {error && <p className="text-red-600">{error}</p>}
+          {loading && <p className="text-gray-500">Loading...</p>}
+          {error && <p className="text-red-500">{error}</p>}
 
           {!loading && !error && !searchResults && folders.length === 0 && files.length === 0 && (
             <p className="text-gray-500">
@@ -459,15 +471,27 @@ function Dashboard() {
               <div
                 key={folder.id}
                 onClick={() => openFolder(folder)}
-                className={`bg-yellow-50 border border-yellow-200 p-4 rounded-lg shadow hover:shadow-md transition ${view !== 'trash' ? 'cursor-pointer' : ''}`}
+                className={`relative bg-amber-50/80 border border-amber-100 p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-200 ${view !== 'trash' ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
               >
                 <div className="flex justify-between items-start gap-2">
                   <p className="font-medium truncate">📁 {folder.name}</p>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => toggleMenu(e, 'folder', folder.id)}
+                    className="text-gray-500 hover:text-gray-800 text-lg leading-none px-1 flex-shrink-0"
+                  >
+                    ⋮
+                  </button>
+                </div>
+
+                {openMenu?.type === 'folder' && openMenu.id === folder.id && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-3 top-10 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10 w-32"
+                  >
                     {view === 'drive' && (
                       <button
                         onClick={(e) => renameFolder(e, folder)}
-                        className="text-xs text-gray-600 hover:underline"
+                        className="block w-full text-left px-3 py-2 text-sm hover:bg-teal-50"
                       >
                         Rename
                       </button>
@@ -475,13 +499,13 @@ function Dashboard() {
                     {view === 'trash' && (
                       <button
                         onClick={(e) => restoreFolder(e, folder.id)}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="block w-full text-left px-3 py-2 text-sm text-teal-600 hover:bg-teal-50"
                       >
                         Restore
                       </button>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             ))}
 
@@ -489,7 +513,7 @@ function Dashboard() {
               <div
                 key={file.id}
                 onClick={() => handleFileClick(file)}
-                className={`bg-white p-4 rounded-lg shadow hover:shadow-md transition ${view !== 'trash' ? 'cursor-pointer' : ''}`}
+                className={`relative bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-200 ${view !== 'trash' ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
               >
                 <div className="flex justify-between items-start gap-2">
                   <div className="min-w-0">
@@ -500,54 +524,64 @@ function Dashboard() {
                       </p>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {view === 'drive' && (
                       <button onClick={(e) => toggleStar(e, file.id)} className="text-lg">
                         {file.starred ? '⭐' : '☆'}
                       </button>
                     )}
+                    <button
+                      onClick={(e) => toggleMenu(e, 'file', file.id)}
+                      className="text-gray-500 hover:text-gray-800 text-lg leading-none px-1"
+                    >
+                      ⋮
+                    </button>
+                  </div>
+                </div>
+
+                {openMenu?.type === 'file' && openMenu.id === file.id && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-3 top-12 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10 w-36"
+                  >
                     {view === 'drive' && (
-                      <button
-                        onClick={(e) => renameFile(e, file)}
-                        className="text-xs text-gray-600 hover:underline"
-                      >
-                        Rename
-                      </button>
-                    )}
-                    {view === 'drive' && (
-                      <button
-                        onClick={(e) => openShareModal(e, file)}
-                        className="text-xs text-gray-600 hover:underline"
-                      >
-                        Share
-                      </button>
-                    )}
-                    {view === 'drive' && (
-                      <button
-                        onClick={(e) => openLinkShareModal(e, file)}
-                        className="text-xs text-gray-600 hover:underline"
-                      >
-                        Get Link
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => renameFile(e, file)}
+                          className="block w-full text-left px-3 py-2 text-sm hover:bg-teal-50"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          onClick={(e) => openShareModal(e, file)}
+                          className="block w-full text-left px-3 py-2 text-sm hover:bg-teal-50"
+                        >
+                          Share
+                        </button>
+                        <button
+                          onClick={(e) => openLinkShareModal(e, file)}
+                          className="block w-full text-left px-3 py-2 text-sm hover:bg-teal-50"
+                        >
+                          Get Link
+                        </button>
+                        <button
+                          onClick={(e) => deleteFile(e, file.id)}
+                          className="block w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </>
                     )}
                     {view === 'trash' && (
                       <button
                         onClick={(e) => restoreFile(e, file.id)}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="block w-full text-left px-3 py-2 text-sm text-teal-600 hover:bg-teal-50"
                       >
                         Restore
                       </button>
                     )}
-                    {view === 'drive' && (
-                      <button
-                        onClick={(e) => deleteFile(e, file.id)}
-                        className="text-xs text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    )}
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
@@ -555,8 +589,8 @@ function Dashboard() {
       </div>
 
       {shareFile && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-medium">Share "{shareFile.originalName}"</h2>
               <button onClick={closeShareModal} className="text-2xl leading-none text-gray-500 hover:text-gray-800">
@@ -569,23 +603,23 @@ function Dashboard() {
                 placeholder="User's email"
                 value={shareEmail}
                 onChange={(e) => setShareEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                className="w-full border border-teal-200 rounded-xl px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-teal-300"
                 required
               />
               <select
                 value={sharePermission}
                 onChange={(e) => setSharePermission(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                className="w-full border border-teal-200 rounded-xl px-3 py-2 mb-3"
               >
                 <option value="VIEWER">Viewer</option>
                 <option value="EDITOR">Editor</option>
               </select>
               {shareMessage && (
-                <p className={`text-sm mb-3 ${shareMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-sm mb-3 ${shareMessage.includes('success') ? 'text-green-600' : 'text-red-500'}`}>
                   {shareMessage}
                 </p>
               )}
-              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+              <button type="submit" className="w-full bg-teal-600 text-white py-2 rounded-xl hover:bg-teal-700">
                 Share
               </button>
             </form>
@@ -594,8 +628,8 @@ function Dashboard() {
       )}
 
       {linkShareFile && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-medium truncate pr-4">Get link for "{linkShareFile.originalName}"</h2>
               <button onClick={closeLinkShareModal} className="text-2xl leading-none text-gray-500 hover:text-gray-800 flex-shrink-0">
@@ -611,7 +645,7 @@ function Dashboard() {
                   placeholder="Leave blank for no password"
                   value={linkSharePassword}
                   onChange={(e) => setLinkSharePassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                  className="w-full border border-teal-200 rounded-xl px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-teal-300"
                 />
                 <label className="block text-sm text-gray-600 mb-1">Expires in (hours, optional)</label>
                 <input
@@ -619,19 +653,19 @@ function Dashboard() {
                   placeholder="Leave blank for no expiry"
                   value={linkShareExpiryHours}
                   onChange={(e) => setLinkShareExpiryHours(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                  className="w-full border border-teal-200 rounded-xl px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-teal-300"
                 />
                 {linkShareMessage && (
-                  <p className="text-sm mb-3 text-red-600">{linkShareMessage}</p>
+                  <p className="text-sm mb-3 text-red-500">{linkShareMessage}</p>
                 )}
-                <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                <button type="submit" className="w-full bg-teal-600 text-white py-2 rounded-xl hover:bg-teal-700">
                   Generate Link
                 </button>
               </form>
             ) : (
               <div>
                 <p className="text-sm text-gray-600 mb-2">Share this link:</p>
-                <div className="bg-gray-100 rounded p-2 text-xs break-all mb-3">
+                <div className="bg-teal-50 rounded-xl p-2 text-xs break-all mb-3">
                   {linkShareResult.fullUrl}
                 </div>
                 {linkShareResult.passwordProtected && (
@@ -647,7 +681,7 @@ function Dashboard() {
                 )}
                 <button
                   onClick={copyLinkToClipboard}
-                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                  className="w-full bg-teal-600 text-white py-2 rounded-xl hover:bg-teal-700"
                 >
                   Copy Link
                 </button>
@@ -658,14 +692,14 @@ function Dashboard() {
       )}
 
       {previewFile && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-auto p-4 relative">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-auto p-4 relative shadow-xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-medium truncate pr-4">{previewFile.originalName}</h2>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <button
                   onClick={downloadPreviewFile}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-teal-600 hover:underline"
                 >
                   Download
                 </button>

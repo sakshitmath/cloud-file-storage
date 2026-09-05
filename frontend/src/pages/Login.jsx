@@ -26,8 +26,8 @@ function Login() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm"
       >
-        <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
-
+                <h1 className="text-3xl font-bold mb-1 text-center text-teal-600">Cloud Storage</h1>
+        <p className="text-sm text-gray-500 text-center mb-6">Login to your account</p>
         {error && (
           <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
         )}
