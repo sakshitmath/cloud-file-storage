@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.cloudstorage.backend.repository.ShareRepository;
 import com.cloudstorage.backend.dto.FileUpdateRequest;
+import com.cloudstorage.backend.model.Permission;
 
 import java.util.List;
 
@@ -141,14 +142,26 @@ public class FileService {
 
     public FileResponse updateFile(Long fileId, FileUpdateRequest request) {
         User user = getCurrentUser();
-        FileEntity file = fileRepository.findByIdAndOwnerId(fileId, user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("File not found or you are not the owner"));
+        FileEntity file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+
+        boolean isOwner = file.getOwner().getId().equals(user.getId());
+        boolean isEditor = shareRepository.findByFileIdAndSharedWithUserId(fileId, user.getId())
+                .map(share -> share.getPermission() == Permission.EDITOR)
+                .orElse(false);
+
+        if (!isOwner && !isEditor) {
+            throw new IllegalArgumentException("You do not have permission to edit this file");
+        }
 
         if (request.getOriginalName() != null && !request.getOriginalName().isBlank()) {
             file.setOriginalName(request.getOriginalName());
         }
 
         if (request.getFolderId() != null) {
+            if (!isOwner) {
+                throw new IllegalArgumentException("Only the owner can move files between folders");
+            }
             Folder folder = folderRepository.findById(request.getFolderId())
                     .orElseThrow(() -> new IllegalArgumentException("Target folder not found"));
             file.setFolder(folder);
